@@ -183,16 +183,16 @@ class G2DCircle extends G2DGraphic {
         ColorShader.use(this.type);
         gl.uniformMatrix4fv(ColorShader.uniform('u_projection'), false, Projector.value);
         const count = UpdateAttributes( this );
-        let mode = this.type == G2DEnum.LINED_CIRCLE ? gl.LINE_LOOP : gl.TRIANGLE_STRIP;
+        let mode = this.type == G2DEnum.LINED_CIRCLE ? gl.LINE_LOOP : gl.TRIANGLE_FAN;
         gl.drawArraysInstanced(mode, 0, cv, count);
     }
 
     toSolid( ) {
-        this.type = G2DEnum.SOLID_RECTANGLE;
+        this.type = G2DEnum.SOLID_CIRCLE;
     }
 
     toLines( ) {
-        this.type = G2DEnum.LINED_RECTANGLE;
+        this.type = G2DEnum.LINED_CIRCLE
     }
 
 }
