@@ -48,9 +48,6 @@ export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
             gl.clear(gl.COLOR_BUFFER_BIT);
         },
         textures:TextureLib,
-        G2DRect,
-        G2DCircle,
-        G2DTexture
     }
 }
 
@@ -103,7 +100,7 @@ type G2DLayerOptions = {
     x?:number, y?:number, z?:number, rx?:number, ry?:number, rz?:number, scale?:number, color?:Float16Array
 }
 
-class G2DGraphic {
+export class G2DGraphic {
 
     instances:G2DGraphicLayer[]
     #form:G2DEnum;
@@ -139,7 +136,7 @@ class G2DGraphic {
 
 }
 
-class G2DRect extends G2DGraphic {
+export class G2DRect extends G2DGraphic {
 
     w:number; 
     h:number;
@@ -169,7 +166,7 @@ class G2DRect extends G2DGraphic {
 
 }
 
-class G2DCircle extends G2DGraphic {
+export class G2DCircle extends G2DGraphic {
 
     r:number;
 
@@ -197,7 +194,7 @@ class G2DCircle extends G2DGraphic {
 
 }
 
-class G2DTexture extends G2DGraphic {
+export class G2DTexture extends G2DGraphic {
 
     ref:string;
 
