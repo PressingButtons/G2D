@@ -15,6 +15,7 @@ let TextureLib:G2DTextureLib;
 let gl:WebGL2RenderingContext;
 const MAX_INSTANCES = 100;
 let init = false;
+let cv = 20;
 
 export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
     if( !init || debug) {
@@ -22,7 +23,7 @@ export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
         // =========================================
         SolidRectModel = G2DCreateBuffer(gl, [-1, -1, 1, -1, -1, 1, 1, 1], gl.STATIC_DRAW).buffer;
         LinedRectModel = G2DCreateBuffer(gl, [-1, -1, 1, -1, 1, 1, -1, 1], gl.STATIC_DRAW).buffer;
-        CircleModel    = G2DCreateBuffer(gl, new Array(50).fill(0).map((_,i) => [Math.cos(i/50), Math.sin(i/50)]).flat( ), gl.STATIC_DRAW).buffer;
+        CircleModel    = G2DCreateBuffer(gl, new Array(cv).fill(0).map((_,i) => [Math.cos(2 * i * Math.PI/cv), Math.sin(2 * i * Math.PI/cv)]).flat( ), gl.STATIC_DRAW).buffer;
         TexModel       = G2DCreateBuffer(gl, [0, 0, 1, 0, 0, 1, 1, 1], gl.STATIC_DRAW).buffer;
         // =========================================
         AttTransform = G2DSegmentedBuffer(gl, 18, MAX_INSTANCES);
@@ -48,6 +49,7 @@ export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
         },
         textures:TextureLib,
         G2DRect,
+        G2DCircle,
         G2DTexture
     }
 }
@@ -63,6 +65,12 @@ const CreateColorShader = ( gl:WebGL2RenderingContext ) => {
             },
             [G2DEnum.LINED_RECTANGLE]: {
                 model: LinedRectModel
+            },
+            [G2DEnum.LINED_CIRCLE]: {
+                model: CircleModel
+            },
+            [G2DEnum.SOLID_CIRCLE]: {
+                model:CircleModel
             }
         }
     });
@@ -149,6 +157,34 @@ class G2DRect extends G2DGraphic {
         const count = UpdateAttributes( this );
         let mode = this.type == G2DEnum.LINED_RECTANGLE ? gl.LINE_LOOP : gl.TRIANGLE_STRIP;
         gl.drawArraysInstanced(mode, 0, 4, count);
+    }
+
+    toSolid( ) {
+        this.type = G2DEnum.SOLID_RECTANGLE;
+    }
+
+    toLines( ) {
+        this.type = G2DEnum.LINED_RECTANGLE;
+    }
+
+}
+
+class G2DCircle extends G2DGraphic {
+
+    r:number;
+
+    constructor( r:number, options:G2DLayerOptions = {} ) {
+        super( G2DEnum.CIRCLE, G2DEnum.LINED_CIRCLE, options );
+        this.r = r;
+    }
+
+    draw( ) {
+        ColorShader.activate( );
+        ColorShader.use(this.type);
+        gl.uniformMatrix4fv(ColorShader.uniform('u_projection'), false, Projector.value);
+        const count = UpdateAttributes( this );
+        let mode = this.type == G2DEnum.LINED_CIRCLE ? gl.LINE_LOOP : gl.TRIANGLE_STRIP;
+        gl.drawArraysInstanced(mode, 0, cv, count);
     }
 
     toSolid( ) {
@@ -373,6 +409,8 @@ const UpdateAttributes = ( obj:G2DGraphic ) => {
         let g = obj.instances[i];
         if( obj.form == G2DEnum.RECTANGLE )
             updateTransform( i, g.x, g.y, g.z, g.rx, g.ry, g.rz, (obj as G2DRect).w * g.scale, (obj as G2DRect).h * g.scale);
+        if( obj.form == G2DEnum.CIRCLE ) 
+            updateTransform( i, g.x, g.y, g.z, g.rx, g.ry, g.rz, (obj as G2DCircle).r * g.scale, (obj as G2DCircle).r * g.scale);
         updateColor( i, g.color );
     }
     AttTransform.refresh( );

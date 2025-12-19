@@ -1,4 +1,4 @@
-# G2D Javascript Graphics Library
+# G2D Typescript Graphics Library
 
 A custom built Webgl2 based rendering library.
 
