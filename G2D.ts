@@ -17,7 +17,13 @@ const MAX_INSTANCES = 100;
 let init = false;
 let cv = 20;
 
-export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
+export type G2DRunEnvironment = {
+    fill:(color:[number, number, number, number]) => void;
+    textures:G2DTextureLib,
+    context:WebGL2RenderingContext
+}
+
+export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ):G2DRunEnvironment {
     if( !init || debug) {
         gl = canvas.transferControlToOffscreen( ).getContext('webgl2') as WebGL2RenderingContext;
         // =========================================
@@ -48,6 +54,9 @@ export default function G2DBuild( canvas:HTMLCanvasElement, debug = false ) {
             gl.clear(gl.COLOR_BUFFER_BIT);
         },
         textures:TextureLib,
+        get context( ) {
+            return gl;
+        }
     }
 }
 
