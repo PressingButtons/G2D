@@ -26,6 +26,22 @@ void main( ) {
     color = v_color;
 }`
 
+const lineVertex = 
+`#version 300 es
+
+layout (location=0) in vec4 a_position;
+layout (location=1) in vec4 a_color;
+
+uniform mat4 u_projection;
+
+out vec4 v_color;
+
+void main( ) {
+    gl_Position = u_projection * a_position;
+    v_color = a_color;
+}`
+
+
 const textureVertex =
 `#version 300 es
 
@@ -67,6 +83,7 @@ void main( ) {
 export default { 
     colorFragment, 
     colorVertex, 
+    lineVertex,
     textureVertex, 
     textureFragment
 };
