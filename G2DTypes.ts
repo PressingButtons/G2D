@@ -16,3 +16,14 @@ export type G2DGraphicLayer = {
     rx:number, ry:number, rz:number;
     color: Float16Array
 }
+
+export type G2DLineLayer  ={
+    x1:number,
+    y1:number,
+    x2:number,
+    y2:number,
+    r:number
+    g:number,
+    b:number,
+    a:number
+}
