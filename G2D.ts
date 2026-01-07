@@ -1,5 +1,5 @@
 import G2DGLSL from "./G2DGLSL";
-import { G2DEnum } from "./G2DTypes";
+import { G2DEnum, type G2DLineLayer } from "./G2DTypes";
 import { mat4 } from "./gl_matrix";
 
 let gl:WebGL2RenderingContext;
@@ -83,6 +83,7 @@ export default class G2DModule {
     static #buildTextureSuite( ) {
         SuiteTexture = new G2DSuite(G2DGLSL.textureVertex, G2DGLSL.textureFragment);
         SuiteTexture.cacheUniform('u_projection');
+        SuiteTexture.cacheUniform('u_texture');
         // ====================================
         const rect = SuiteTexture.createModel(G2DEnum.RECTANGLE);
         rect.setAttribute('a_position', BufferTextureRect.buffer, 2, 0, 0);
@@ -108,7 +109,46 @@ export default class G2DModule {
         return fetch( url ).then( res => res.blob( ) ).then( createImageBitmap ); 
     }
 
+    drawCircles( mode:GLenum, circles:G2DCircle[] ) {
+        gl.useProgram(SuiteColor.program);
+        SuiteColor.vertices[G2DEnum.CIRCLE].activate( );
+        G2DProjector.set(SuiteColor.uniforms.u_projection);
+        G2DShapeTransformer.updateCircle( circles );
+        gl.drawArraysInstanced(mode == G2DEnum.SOLID ? gl.TRIANGLE_FAN : gl.LINE_LOOP, 0, CIRCLE_POINTS, circles.length);
+    }
+
+    drawLines( lines:G2DLine[] ) {
+        gl.useProgram(SuiteLine.program);
+        SuiteLine.vertices[G2DEnum.LINES].activate( );
+        G2DProjector.set(SuiteLine.uniforms.u_projection);
+        for(let i = 0, line; line = lines[i]; i++) {
+            BufferLine.data.set([line.x1, line.y1, line.x2, line.y2]);
+            BufferLine.refresh( );
+            BufferColor.data.set(line.color);
+            BufferColor.refresh( );
+            gl.drawArrays(gl.LINES, 0, 2);
+        }
+    }
+
+    drawRectangles( mode:G2DEnum, rects:G2DRect[] ) {
+        gl.useProgram(SuiteColor.program);
+        SuiteColor.vertices[G2DEnum.RECTANGLE].activate( );
+        G2DProjector.set(SuiteColor.uniforms.u_projection);
+        G2DShapeTransformer.updateRect( rects );
+        gl.drawArraysInstanced(mode == G2DEnum.SOLID ? gl.TRIANGLE_FAN : gl.LINE_LOOP, 0, 4, rects.length);
+    }
+
+    drawTexture( texture:string, items:G2DRect[] ) {
+        gl.useProgram(SuiteTexture.program);
+        SuiteTexture.vertices[G2DEnum.RECTANGLE].activate( );
+        G2DProjector.set(SuiteTexture.uniforms.u_projection);
+        G2DShapeTransformer.updateRect(items);
+        G2DTextureCache.use( texture, SuiteTexture.uniforms.u_texture );
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, items.length);
+    }
+
 }
+
 
 class G2DBuffer {
 
@@ -209,203 +249,41 @@ class G2DVertex {
     activate( ) {
         gl.bindVertexArray( this.vao );
     }
-
 }
 // ========================================================
 // Displayables
 // ========================================================
-export type G2DLayer = {
-    scale:number, x:number, y:number, z:number, rx:number, ry:number, rz:number, color:Float16Array
-}
-
-export class G2DGraphic {
-
-    layers:G2DLayer[];
-    #model:G2DEnum;
-    #form:G2DEnum;
-
-    protected constructor(model:G2DEnum, form:G2DEnum) {
-        this.layers = [];
-        this.#form  = form;
-        this.#model = model;
-    }
-
-    get model( ) {
-        return this.#model;
-    }
-
-    get form( ) {
-        return this.#form;
-    }
-
-    protected set form( form:G2DEnum ) {
-        this.#form = form;
-    }
-
-    addLayer( options:{x?:number, y?:number, z?:number, rx?:number, ry?:number, rz?:number, scale?:number, color?:Float16Array} ) {
-        const { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, scale = 1, color = new Float16Array([1, 1, 1, 1])} = options;
-        this.layers.push({x, y, z, rx, ry, rz, scale, color});
-        return this.layers[this.layers.length - 1];
-    }
-
-    remove( i:number ) {
-        this.layers.splice(i, 1);
-        return this.layers.length;
-    }
-
-    draw( ) { 
-
-    }
+type G2DShape = {
+    x:number,
+    y:number,
+    z:number,
+    rx:number,
+    ry:number,
+    rz:number,
+    color:[number, number, number, number];
 
 }
 
-export class G2DCircle extends G2DGraphic {
-
-    radius:number;
-
-    constructor( radius:number ) {
-        super( G2DEnum.CIRCLE, G2DEnum.LINES );
-        this.radius = radius; 
-    }
-
-    toSolid( ) {
-        this.form = G2DEnum.SOLID;
-    }
-
-    toLines( ) {
-        this.form = G2DEnum.LINES;
-    }
-
-    draw( ) { 
-        gl.useProgram(SuiteColor.program);
-        SuiteColor.vertices[this.model].activate( );
-        G2DProjector.set(SuiteColor.uniforms['u_projection']);
-        G2DShapeTransfomer.update(this);
-        switch( this.form ) {
-            case G2DEnum.SOLID:
-                gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, CIRCLE_POINTS, this.layers.length); 
-                break;
-            case G2DEnum.LINES:
-                gl.drawArraysInstanced(gl.LINE_LOOP, 0, CIRCLE_POINTS, this.layers.length);
-        }
-    }
-}
-
-export class G2DRect extends G2DGraphic {
-
+export interface G2DRect extends G2DShape {
     width:number;
     height:number;
-
-    constructor( width:number, height:number ) {
-        super( G2DEnum.RECTANGLE, G2DEnum.LINES );
-        this.width = width;
-        this.height = height;
-    }
-
-    toSolid( ) {
-        this.form = G2DEnum.SOLID;
-    }
-
-    toLines( ) {
-        this.form = G2DEnum.LINES;
-    }
-
-    draw( ) { 
-        gl.useProgram(SuiteColor.program);
-        SuiteColor.vertices[this.model].activate( );
-        G2DProjector.set(SuiteColor.uniforms['u_projection']);
-        G2DShapeTransfomer.update(this);
-        switch( this.form ) {
-            case G2DEnum.SOLID:
-                gl.drawArraysInstanced(gl.TRIANGLE_FAN, 0, 4, this.layers.length); 
-                break;
-            case G2DEnum.LINES:
-                gl.drawArraysInstanced(gl.LINE_LOOP, 0, 4, this.layers.length);
-        }
-    }
 }
 
-export class G2DLine {
-
-    layers:{x1:number, y1:number, x2:number, y2:number, r:number, g:number, b:number, a:number}[]
-
-    constructor( ) {
-        this.layers = [];
-    }
-
-    addLine( line:{x1:number, y1:number, x2:number, y2:number, r:number, g:number, b:number, a:number} ) {
-        this.layers.push(line);
-    }
-
-    draw( ) {
-        gl.useProgram(SuiteLine.program);
-        SuiteLine.vertices[G2DEnum.LINES].activate( );
-        G2DProjector.set(SuiteLine.uniforms['u_projection']);
-        for(let i = 0, layer; layer = this.layers[i]; i++) {
-            BufferLine.data.set([layer.x1, layer.y1, layer.x2, layer.y2]);
-            BufferColor.data.set([layer.r, layer.g, layer.b, layer.a]);
-            BufferLine.refresh( );
-            BufferColor.refresh( );
-            gl.drawArrays(gl.LINES, 0, 2);
-        }
-    }
+export interface G2DCircle extends G2DShape {
+    radius: number;
 }
 
-export class G2DTexture extends G2DGraphic {
-
-    static #cache = new Map<string, { texture:WebGLTexture, w:number, h:number }>( );
-
-    static async load( url:string, cellHeight?:number ) {
-        if( !this.#cache.has(url) )
-            await G2DTexture.#create( url, cellHeight );    
-        return new G2DTexture( url );
-    }
-
-    static async #create( url:string, h?:number ) {
-        const bitmap = await G2DModule.Graphics.loadBitmap( url );
-        const texture = gl.createTexture( );
-        h = h ? h : bitmap.height;
-        gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
-        gl.texImage3D( gl.TEXTURE_2D_ARRAY, 0, gl.RGBA, bitmap.width, bitmap.height, bitmap.height/h, 0, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
-        gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        this.#cache.set( url, { texture, w:bitmap.width, h });
-    }
-    
-    #texture:string;
-
-    private constructor( textureReference:string ) {
-        super(G2DEnum.TEXTURE, G2DEnum.RECTANGLE);
-        this.#texture = textureReference;
-    }
-
-    assign( url:string ) {
-        if( G2DTexture.#cache.has(url) )
-            this.#texture = url;
-        throw `G2DTexture Error: texture(${url}) not found.`;
-    }
-
-    get width( ) {
-        const texture = G2DTexture.#cache.get( this.#texture )
-        if( texture ) return texture.w;
-        return 0;
-    }
-
-    get height( ) {
-        const texture = G2DTexture.#cache.get( this.#texture )
-        if( texture ) return texture.h;
-        return 0;
-    }
-
-    draw( ) {
-        gl.useProgram(SuiteTexture.program);
-        SuiteTexture.vertices[G2DEnum.RECTANGLE].activate( );
-        G2DProjector.set(SuiteTexture.uniforms['u_projection']);
-        G2DShapeTransfomer.update(this);
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, this.layers.length);
-    }
-
+export type G2DLine = {
+    x1:number;
+    x2:number,
+    y1:number,
+    y2:number,
+    color:[number, number, number, number]
 }
+
+export type G2DGraphic = G2DRect | G2DCircle | G2DLine;
+
+
 
 // ========================================================
 // Utility Objects 
@@ -428,26 +306,27 @@ class G2DProjector {
 
 }
 
-class G2DShapeTransfomer {
+class G2DShapeTransformer {
 
-    static update( graphic:G2DGraphic ) {
-        for(let i = 0, l; l = graphic.layers[i]; i++) {
-            switch( graphic.model ) {
-                case G2DEnum.CIRCLE:
-                    G2DShapeTransfomer.setTransform(i, l.x, l.y, l.z, l.rx, l.ry, l.rz, (graphic as G2DCircle).radius * l.scale, (graphic as G2DCircle).radius * l.scale);
-                    break;
-                case G2DEnum.RECTANGLE:
-                    G2DShapeTransfomer.setTransform(i, l.x, l.y, l.z, l.rx, l.ry, l.rz, (graphic as G2DRect).width * l.scale, (graphic as G2DRect).height * l.scale);
-                    break;
-                case G2DEnum.TEXTURE:
-                    G2DShapeTransfomer.setTransform(i, l.x, l.y, l.z, l.rx, l.ry, l.rz, (graphic as G2DRect).width * l.scale, (graphic as G2DRect).height * l.scale);
-                    break;
-            }
-            G2DShapeTransfomer.setColor(i, l.color);
+    static updateRect( items:G2DRect[] ) {
+        for(let i = 0; i < items.length; i++) {
+            const r = items[i];
+            G2DShapeTransformer.setTransform(i, r.x, r.y, r.z, r.rx, r.ry, r.rz, r.width, r.height);
+            G2DShapeTransformer.setColor(i, r.color);
         }
         BufferTransform.refresh( );
         BufferColor.refresh( );
     }
+
+    static updateCircle( items:G2DCircle[] ) {
+        for(let i = 0, c; c = items[i]; i++) {
+            G2DShapeTransformer.setTransform(i, c.x, c.y, c.rz, c.rx, c.ry, c.rz, c.radius, c.radius);
+            G2DShapeTransformer.setColor(i, c.color);
+        }
+        BufferTransform.refresh( );
+        BufferColor.refresh( );
+    }
+
 
     static setTransform( index:number, x:number, y:number, z:number, rx:number, ry:number, rz:number, w:number, h:number ) {
         const chunk = TransformChunks[index];
@@ -458,12 +337,47 @@ class G2DShapeTransfomer {
         mat4.scale(chunk, w * 0.5, h * 0.5);
     }
 
-    static setColor(index:number, color:Float16Array) {
+    static setColor(index:number, color:[number, number, number, number]) {
         const chunk = ColorChunks[index];
         chunk.set(color);
     }
 
     private constructor( ) { }
+}
+
+export class G2DTextureCache {
+
+    private constructor( ) { }
+
+    static #cache:{[key:string]: { texture:WebGLTexture, w:number, h:number }} = { }
+
+    static async load( url:string ) {
+        if(G2DTextureCache.#cache[url] != undefined )
+            return G2DTextureCache.#cache[url];
+        return G2DTextureCache.#create( url );
+    }
+
+    static async #create( url:string, h?:number ) {
+        const bitmap = await G2DModule.Graphics.loadBitmap( url );
+        const texture = gl.createTexture( );
+        h = h ? h : bitmap.height;
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+        gl.texImage3D( gl.TEXTURE_2D_ARRAY, 0, gl.RGBA, bitmap.width, bitmap.height, bitmap.height/h, 0, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+        gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        G2DTextureCache.#cache[ url] =  { texture, w:bitmap.width, h };
+        return texture;
+    }
+
+    static use(url:string, location:WebGLUniformLocation, index:number = 0) {
+        const {texture} = G2DTextureCache.#cache[url];
+        if(texture) {
+            gl.uniform1i(location, index);
+            gl.activeTexture(gl.TEXTURE0 + index);
+            gl.bindTexture(gl.TEXTURE_2D_ARRAY, texture);
+        }
+    }
+
 }
 // ========================================================
 // Compiler
