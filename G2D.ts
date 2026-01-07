@@ -44,7 +44,7 @@ export default class G2DModule {
         BufferCircle = new G2DBuffer(new Array(cp).fill(0).map((_, i) => [Math.cos(2 * i * Math.PI/cp), Math.sin(2 * i * Math.PI/cp)]).flat( ), gl.STATIC_DRAW);
         BufferLine   = new G2DBuffer(new Array(4).fill(0), gl.DYNAMIC_DRAW);
         BufferTransform = new G2DBuffer(new Array(18 * MAX_INSTANCES).fill(0), gl.DYNAMIC_DRAW);
-        BufferColor = new G2DBuffer(new Array(16 * MAX_INSTANCES).fill(0), gl.DYNAMIC_DRAW);
+        BufferColor = new G2DBuffer(new Array(4 * MAX_INSTANCES).fill(0), gl.DYNAMIC_DRAW);
     }
 
     static #buildBufferViewChunks( ) {
@@ -52,7 +52,7 @@ export default class G2DModule {
         ColorChunks = [];
         for(let i = 0; i < MAX_INSTANCES; i++) {
             TransformChunks.push(BufferTransform.data.subarray(i * 18, i * 18 + 18));
-            ColorChunks.push(BufferColor.data.subarray(i * 16, i * 16 + 16));
+            ColorChunks.push(BufferColor.data.subarray(i * 4, i * 4 + 4));
         }
     }
 
