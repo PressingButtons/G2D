@@ -109,17 +109,19 @@ export default class G2DModule {
         return fetch( url ).then( res => res.blob( ) ).then( createImageBitmap ); 
     }
 
-    drawCircles( mode:GLenum, circles:G2DCircle[] ) {
+    drawCircles( mode:GLenum, circles:G2DCircle[], cam:[number, number, number] = [0, 0, 1] ) {
         gl.useProgram(SuiteColor.program);
         SuiteColor.vertices[G2DEnum.CIRCLE].activate( );
+        G2DProjector.update(...cam);
         G2DProjector.set(SuiteColor.uniforms.u_projection);
         G2DShapeTransformer.updateCircle( circles );
         gl.drawArraysInstanced(mode == G2DEnum.SOLID ? gl.TRIANGLE_FAN : gl.LINE_LOOP, 0, CIRCLE_POINTS, circles.length);
     }
 
-    drawLines( lines:G2DLine[] ) {
+    drawLines( lines:G2DLine[], cam:[number, number, number] = [0, 0, 1] ) {
         gl.useProgram(SuiteLine.program);
         SuiteLine.vertices[G2DEnum.LINES].activate( );
+        G2DProjector.update(...cam);
         G2DProjector.set(SuiteLine.uniforms.u_projection);
         for(let i = 0, line; line = lines[i]; i++) {
             BufferLine.data.set([line.x1, line.y1, line.x2, line.y2]);
@@ -130,21 +132,29 @@ export default class G2DModule {
         }
     }
 
-    drawRectangles( mode:G2DEnum, rects:G2DRect[] ) {
+    drawRectangles( mode:G2DEnum, rects:G2DRect[], cam:[number, number, number] = [0, 0, 1] ) {
         gl.useProgram(SuiteColor.program);
         SuiteColor.vertices[G2DEnum.RECTANGLE].activate( );
+        G2DProjector.update(...cam);
         G2DProjector.set(SuiteColor.uniforms.u_projection);
         G2DShapeTransformer.updateRect( rects );
         gl.drawArraysInstanced(mode == G2DEnum.SOLID ? gl.TRIANGLE_FAN : gl.LINE_LOOP, 0, 4, rects.length);
     }
 
-    drawTexture( texture:string, items:G2DRect[] ) {
+    drawTexture( texture:string, items:G2DRect[], cam:[number, number, number] = [0, 0, 1] ) {
         gl.useProgram(SuiteTexture.program);
         SuiteTexture.vertices[G2DEnum.RECTANGLE].activate( );
+        G2DProjector.update(...cam);
         G2DProjector.set(SuiteTexture.uniforms.u_projection);
         G2DShapeTransformer.updateRect(items);
         G2DTextureCache.use( texture, SuiteTexture.uniforms.u_texture );
         gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, items.length);
+    }
+
+    resize( width:number, height:number ) {
+        gl.canvas.width = width;
+        gl.canvas.height = height;
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     }
 
 }
