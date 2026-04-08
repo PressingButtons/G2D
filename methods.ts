@@ -1,5 +1,6 @@
+import { G2DLine, G2DPolygon } from "./classes";
 import { mat4 } from "./gl_matrix";
-import { G2DMode, type G2DAttribute, type G2DChunkedBuffer, type G2DCircle, type G2DDrawable, type G2DGraphic, type G2DLine, type G2DMatrixAttribute, type G2DRect, type G2DTexture, type G2DVertexConfiguration } from "./types";
+import { type G2DAttribute, type G2DChunkedBuffer, type G2DMatrixAttribute,  type G2DVertexConfiguration } from "./types";
 
 // =============================================
 // Compiling Shader Programs
@@ -117,50 +118,8 @@ export const G2DExtractUniforms = ( gl:WebGL2RenderingContext, program:WebGLProg
 }
 
 // ==================================================
-// Graphic Shape Generation
+// Loading Graphic Data
 // ==================================================
-export const G2DGenerateCircle = ( ):G2DCircle => {
-    return {
-        position: {x:0, y:0, z:0},
-        radius: 1,
-        color: [0, 0, 0, 1],
-        mode: G2DMode.LINES
-    }
-}
-
-export const G2DGenerateLine = ( ):G2DLine => {
-    return {
-        color: [0, 0, 0, 1],
-        origin: { x:0, y:0 },
-        vector: { x:0, y:0} ,
-    }
-}
-
-export const G2DGenerateRect = ( ):G2DRect => {
-    return {
-        position: {x:0, y:0, z:0},
-        rotation: {x:0, y:0, z:0},
-        size: {width: 1, height: 1},
-        color: [0, 0, 0, 1],
-        mode: G2DMode.LINES
-    }
-}
-
-export const G2DGenerateTexture = ( ):G2DTexture => {
-    return Object.assign( G2DGenerateRect( ), {
-        texture: {uri: '', index: 0}
-    })
-}
-
-export const G2DGetDrawMode = ( gl:WebGL2RenderingContext, mode:G2DMode ) => {
-    if( mode == G2DMode.LINES )
-        return gl.LINE_LOOP;
-    else if( mode == G2DMode.SOLID )
-        return gl.TRIANGLE_FAN
-    else 
-        return gl.TRIANGLE_STRIP;
-}
-
 export const G2DLoadBitmap = ( uri:string ) => {
     return fetch( uri ).then( res => res.blob( ) ).then( createImageBitmap );
 }
@@ -169,6 +128,10 @@ export const G2DLoadTexture = async ( gl:WebGL2RenderingContext, uri:string, cel
     const bitmap = await G2DLoadBitmap( uri );
     return G2DCreateTexture( gl, bitmap, cellHeight )
 }
+
+// ================================
+// Setting Projection
+// ================================
 
 export const G2DSetProjection = (gl:WebGL2RenderingContext, uniform:WebGLUniformLocation, view:[number, number, number], matrix:Float32Array ) => {
     const w = gl.canvas.width  * 0.5;
@@ -188,85 +151,35 @@ export const G2DSetProjection = (gl:WebGL2RenderingContext, uniform:WebGLUniform
 // ======================================
 // Transformations
 // ======================================
-export const G2DTransformCircle = ( gl:WebGL2RenderingContext, object:G2DDrawable, graphic:G2DCircle, transform:G2DChunkedBuffer, color:G2DChunkedBuffer ) =>{
-    mat4.fromTranslation(transform.data, 
-        object.position.x + graphic.position.x, 
-        object.position.y + graphic.position.y,
-        (object.position.z || 0) + graphic.position.z
-    );
+export const G2DTransformPolygon = ( gl:WebGL2RenderingContext, polygon:G2DPolygon, transform:G2DChunkedBuffer, color:G2DChunkedBuffer ) => {
+    for( let i = 0; i < polygon.length; i++ ) {
+        const pchunk = polygon.chunk(i);
+        const tchunk = transform.chunks[i];
+        const cchunk = color.chunks[i];
+        mat4.fromTranslation( tchunk, pchunk.px + pchunk.ox, pchunk.py + pchunk.oy, pchunk.pz + pchunk.oz );
+        mat4.rotateX( tchunk, pchunk.rx );
+        mat4.rotateY( tchunk, pchunk.ry );
+        mat4.rotateZ( tchunk, pchunk.rz );
+        mat4.scale(tchunk, pchunk.width * 0.5, pchunk.height * 0.5);
+        tchunk[16] = pchunk.depth;
+        tchunk[17] = pchunk.palette;
+        cchunk.set(pchunk.getColor( ));
+    }
 
-    mat4.scale( transform.data,
-        graphic.radius,
-        graphic.radius,
-        1
-    );
-
-    color.data.set(graphic.color);
-
-    G2DUpdateBuffer(gl, transform.buffer, transform.data);
-    G2DUpdateBuffer(gl, color.buffer, color.data);
+    G2DUpdateBuffer(gl, transform.buffer, transform.data );
+    G2DUpdateBuffer(gl, color.buffer, color.data)
 }
 
-export const G2DTransformLine = ( gl:WebGL2RenderingContext, object:G2DDrawable, graphic:G2DLine, line:G2DChunkedBuffer, color:G2DChunkedBuffer ) =>{
-    line.data.set([
-        object.position.x + graphic.origin.x,
-        object.position.y + graphic.origin.y,
-        object.position.x + graphic.vector.x,
-        object.position.y + graphic.vector.y
-    ]);
-
-    color.data.set(graphic.color);
-
-    G2DUpdateBuffer(gl, line.buffer, line.data);
-    G2DUpdateBuffer(gl, color.buffer, color.data);
-}
-
-export const G2DTransformRect = ( gl:WebGL2RenderingContext, object:G2DDrawable, graphic:G2DRect, transform:G2DChunkedBuffer, color:G2DChunkedBuffer ) =>{
-    mat4.fromTranslation(transform.data, 
-        object.position.x + graphic.position.x, 
-        object.position.y + graphic.position.y,
-        (object.position.z || 0) + graphic.position.z
-    );
-    mat4.rotateX( transform.data, graphic.rotation.x );
-    mat4.rotateY( transform.data, graphic.rotation.y );
-    mat4.rotateZ( transform.data, graphic.rotation.z );
-
-    mat4.scale( transform.data,
-        graphic.size.width * 0.5,
-        graphic.size.height * 0.5,
-        1
-    );
-
-    color.data.set(graphic.color);
-
-    G2DUpdateBuffer(gl, transform.buffer, transform.data);
-    G2DUpdateBuffer(gl, color.buffer, color.data);
-}
-
-export const G2DTransformTexture = ( gl:WebGL2RenderingContext, object:G2DDrawable, graphic:G2DTexture, transform:G2DChunkedBuffer, color:G2DChunkedBuffer ) =>{
-    mat4.fromTranslation(transform.data, 
-        object.position.x + graphic.position.x, 
-        object.position.y + graphic.position.y,
-        (object.position.z || 0) + graphic.position.z
-    );
-    mat4.rotateX( transform.data, graphic.rotation.x );
-    mat4.rotateY( transform.data, graphic.rotation.y );
-    mat4.rotateZ( transform.data, graphic.rotation.z );
-
-    mat4.scale( transform.data,
-        graphic.size.width * 0.5,
-        graphic.size.height * 0.5,
-        1
-    );
-
-    transform.data[16] = graphic.texture.index;
-    if( graphic.palette )
-        transform.data[17] = graphic.palette.index;
-
-    color.data.set(graphic.color);
-
-    G2DUpdateBuffer(gl, transform.buffer, transform.data);
-    G2DUpdateBuffer(gl, color.buffer, color.data);
+export const G2DTransformLine = ( gl:WebGL2RenderingContext, line:G2DLine, lineBuffer:G2DChunkedBuffer, color:G2DChunkedBuffer ) => {
+    for( let i = 0; i < line.length; i++ ) {
+        const lchunk = line.chunk(i);
+        const bchunk = lineBuffer.chunks[i];
+        const cchunk = color.chunks[i];
+        bchunk.set([lchunk.px, lchunk.py, lchunk.vx, lchunk.vy]);
+        cchunk.set(lchunk.getColor());
+    }
+    G2DUpdateBuffer(gl, lineBuffer.buffer, lineBuffer.data );
+    G2DUpdateBuffer(gl, color.buffer, color.data)
 }
 
 export const G2DUpdateBuffer = ( gl:WebGL2RenderingContext, buffer:WebGLBuffer, data:Float16Array, offset:number = 0 ) => {
