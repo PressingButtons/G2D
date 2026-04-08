@@ -173,6 +173,18 @@ class G2DChunk {
     get palette( ) { return this.#chunk[16] }
     set palette(n) { this.#chunk[16] = n }
 
+    get red( ) { return this.#chunk[11] }
+    set red(n) { this.#chunk[11] = n }
+
+    get grn( ) { return this.#chunk[12] }
+    set grn(n) { this.#chunk[12] = n }
+
+    get blu( ) { return this.#chunk[13] }
+    set blu(n) { this.#chunk[13] = n }
+
+    get alp( ) { return this.#chunk[14] }
+    set alp(n) { this.#chunk[14] = n }
+
     setColor( r:number, g:number, b:number, a:number) {
         this.#chunk.set([r, g, b, a], 11);
     }
@@ -248,6 +260,18 @@ class G2DLineChunk {
 
     get vy( ) { return this.#data[3]; }
     set vy(n) { this.#data[3] = n; }
+
+    get red( ) { return this.#data[4] }
+    set red(n) { this.#data[4] = n }
+
+    get grn( ) { return this.#data[5] }
+    set grn(n) { this.#data[5] = n }
+
+    get blu( ) { return this.#data[6] }
+    set blu(n) { this.#data[6] = n }
+
+    get alp( ) { return this.#data[7] }
+    set alp(n) { this.#data[7] = n }
 
     setColor( color:[number, number, number, number]) {
         this.#data.set(color, 4)
