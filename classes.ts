@@ -96,6 +96,10 @@ export class G2DPolygon {
         return this._array;
     }
 
+    clear( ) {
+        this._array.fill(0);
+    }
+
 }
 
 /**
@@ -232,6 +236,10 @@ export class G2DLine {
 
     chunk(i:number) {
         return this.#chunks[i];
+    }
+
+    clear( ) {
+        this.#data.fill(0);
     }
 
 }
