@@ -134,8 +134,8 @@ export const G2DLoadTexture = async ( gl:WebGL2RenderingContext, uri:string, cel
 // ================================
 
 export const G2DSetProjection = (gl:WebGL2RenderingContext, uniform:WebGLUniformLocation, view:[number, number, number], matrix:Float32Array ) => {
-    const w = gl.canvas.width  * 0.5;
-    const h = gl.canvas.height * 0.5;
+    const w = (gl.canvas.width  * 0.5) / view[2];
+    const h = (gl.canvas.height * 0.5) / view[2];
     mat4.ortho(
         matrix,
         view[0] - w,
