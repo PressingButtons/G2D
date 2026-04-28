@@ -166,6 +166,7 @@ export const G2DTransformPolygon = ( gl:WebGL2RenderingContext, polygon:G2DPolyg
         cchunk.set(pchunk.getColor( ));
     }
 
+
     G2DUpdateBuffer(gl, transform.buffer, transform.data );
     G2DUpdateBuffer(gl, color.buffer, color.data)
 }

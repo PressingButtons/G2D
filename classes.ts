@@ -210,6 +210,10 @@ class G2DChunk {
         this.#chunk.set([x, y, z], 3);
     }
 
+    setRotation( x:number, y:number, z:number ) {
+        this.#chunk.set([x, y, z], 8);
+    }
+
     resize( width:number, height:number ) {
         this.#chunk.set([width, height], 6);
     }
