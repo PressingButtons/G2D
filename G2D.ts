@@ -168,6 +168,20 @@ const G2D = {
 
     loadTexture: ( uri:string, height?:number ) => {
         return cache.load(gl, uri, height);
+    },
+
+    cacheTexture:( uri:string, bitmap:ImageBitmap, height = bitmap.height) => {
+        cache.setup(gl, uri, bitmap, height);
+    },
+
+    unloadTexture:(uri:string) => {
+        cache.unload(uri);
+    },
+
+    resize:( width:number, height:number ) => {
+        gl.canvas.width = width;
+        gl.canvas.height = height;
+        gl.viewport(0, 0, width, height);
     }
 }
 

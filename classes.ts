@@ -1,4 +1,4 @@
-import { G2DCompile, G2DCreateVertex, G2DExtractUniforms, G2DLoadTexture, G2DSetProjection } from "./methods";
+import { G2DCompile, G2DCreateTexture, G2DCreateVertex, G2DExtractUniforms, G2DLoadTexture, G2DSetProjection } from "./methods";
 import type { G2DSuiteConfiguration } from "./types";
 
 export class G2DSuite {
@@ -47,6 +47,10 @@ export class G2DTextureCache {
         texture = await G2DLoadTexture( gl, uri, height );
         this.cache[uri] = texture;
         return texture;
+    }
+
+    async setup( gl:WebGL2RenderingContext, uri:string, bitmap:ImageBitmap, height:number ) {
+        this.cache[uri] = G2DCreateTexture(gl, bitmap, height);
     }
 
     use( gl:WebGL2RenderingContext, name:string, uniform:WebGLUniformLocation, index:number = 0 ) {
